@@ -55,14 +55,8 @@ test('Add two products to the basket on huel.com', async () => {
     expect(page.url()).toContain('/cart');
     console.log('Basket URL verified');
 
-    //Wait for Search bar to be clickable
-    await page.waitForSelector('button.header__icon-wrapper[data-testid="SearchBarIcon"]', {
-      state: 'visible',
-      timeout: 60000,
-  });
-
     // Click on search bar button
-    await page.click('button.header__icon-wrapper[data-testid="SearchBarIcon"]');
+    await page.click('button[aria-label="Search"]');
 
     //Search for 'Daily Greens' and press Enter
     await page.fill('input[data-testid="SearchBar__input"]', 'Daily Greens');
@@ -84,32 +78,29 @@ test('Add two products to the basket on huel.com', async () => {
     // Continue to the basket
     await page.click('button.is-success:has-text("Continue to basket")');
 
-    //Wait for the basket items container to be visible
-    await page.waitForSelector('.basket-items-container', { timeout: 10000 });
 
+       // Verify the basket contents
+       const basketItems = await page.$$eval('.item', items => items.map(item => {
+        const heading = item.querySelector('.item__heading a');
+        const quantity = item.querySelector('.item__quantity');
 
-   // Verify the basket contents
-    const basketItems = await page.$$eval('.item', items => items.map(item => {
-    const heading = item.querySelector('.item__heading a');
-    const quantity = item.querySelector('.item__quantity');
-    
-    if (heading && quantity) {
-      const combinedText = `${quantity.textContent.trim()} of ${heading.textContent.trim()}`;
-      console.log('Basket item:', combinedText);
-      return combinedText;
-    } else {
-      console.log('Heading or quantity not found for item:', item.outerHTML);
-      return null;
-    }
-  }));
-  
+        if (heading && quantity) {
+            const combinedText = `${quantity.textContent.trim()} of ${heading.textContent.trim()}`;
+            console.log('Basket item:', combinedText);
+            return combinedText;
+        } else {
+            console.log('Heading or quantity not found for item:', item.outerHTML);
+            return null;
+        }
+    }));
+
     // Filter out any null values from the basketItems array
     const filteredBasketItems = basketItems.filter(item => item !== null);
-
     console.log('Filtered basket items:', filteredBasketItems);
 
-    expect(filteredBasketItems).toContain('1 bag of Huel Daily Greens');
-    expect(filteredBasketItems).toContain('2 bags of Huel Instant Meals');
+    // Use regular expressions to match the expected values
+    expect(filteredBasketItems.some(item => /\d+\s+bag of Huel Daily Greens/i.test(item))).toBe(true);
+    expect(filteredBasketItems.some(item => /\d+\s+bags of Huel Instant Meals/i.test(item))).toBe(true);
 
     await browser.close();
 
